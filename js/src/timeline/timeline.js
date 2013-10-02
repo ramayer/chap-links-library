@@ -193,6 +193,9 @@ links.Timeline = function(container) {
         'snapEvents': true,
         'groupChangeable': true,
 
+        'clusterMinItems': 10,     // The minimum number of nearby items to make a cluster
+        'clusterMaxScale': 0.001,  // A maximum scale to cluster data (don't cluster when 1 pixel is a millisecond or smaller)
+
         'showCurrentTime': true, // show a red bar displaying the current time
         'showCustomTime': false, // show a blue, draggable bar displaying a custom time    
         'showMajorLabels': true,
@@ -5239,7 +5242,7 @@ links.Timeline.ClusterGenerator.prototype.getClusters = function (scale) {
     var level = -1,
         granularity = 2, // TODO: what granularity is needed for the cluster levels?
         timeWindow = 0,  // milliseconds
-        maxItems = 5;    // TODO: do not hard code maxItems
+        maxItems = Number(this.timeline.options.clusterMinItems);
 
     if (scale > 0) {
         level = Math.round(Math.log(100 / scale) / Math.log(granularity));
@@ -5247,8 +5250,16 @@ links.Timeline.ClusterGenerator.prototype.getClusters = function (scale) {
 
         // groups must have a larger time window, as the items will not be stacked
         if (this.timeline.groups && this.timeline.groups.length) {
-            timeWindow *= 4;
+            timeWindow *= 2;  // 4 was way too big, and quite annoying.
         }
+    }
+
+    // Have a minimum scale at which we don't cluster.
+    // Once we're zoomed to the level that a single pixel is 
+    // a millisecond, the clusters seem to often be more annoying 
+    // than useful.
+    if (scale > Number(this.timeline.options.clusterMaxScale)) {
+        timeWindow = 0;
     }
 
     // clear the cache when and re-filter the data when needed.
